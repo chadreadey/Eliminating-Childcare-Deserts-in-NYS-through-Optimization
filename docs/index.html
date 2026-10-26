@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NYS Child Care Deserts</title>
+<meta name="description" content="Interactive map of an optimal plan to eliminate child care deserts in New York State: 3,513 new facilities and 2,343 expansions for $444.9M.">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --hairline: #e1e0d9;
+    --ring: rgba(11, 11, 11, 0.10);
+    --existing: #b5b4ac;
+    --s: #2a78d6;
+    --m: #eb6834;
+    --l: #1baf7a;
+    --added: #2a78d6;
+    --today: #c3c2b7;
+    --track: #f0efec;
+    --short: #d03b3b;
+    --good: #006300;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #f0efec;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --hairline: #2c2c2a;
+      --ring: rgba(255, 255, 255, 0.10);
+      --existing: #55554f;
+      --s: #3987e5;
+      --m: #d95926;
+      --l: #199e70;
+      --added: #3987e5;
+      --today: #55554f;
+      --track: #262624;
+      --short: #e66767;
+      --good: #0ca30c;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --hairline: #2c2c2a;
+    --ring: rgba(255, 255, 255, 0.10);
+    --existing: #55554f;
+    --s: #3987e5;
+    --m: #d95926;
+    --l: #199e70;
+    --added: #3987e5;
+    --today: #55554f;
+    --track: #262624;
+    --short: #e66767;
+    --good: #0ca30c;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 32px; }
+  h1 { font-size: 24px; line-height: 1.2; margin: 0 0 6px; font-weight: 650; letter-spacing: -0.01em; }
+  .lede { color: var(--ink-2); margin: 0 0 20px; max-width: 760px; }
+  .lede a, footer a { color: inherit; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 12px 14px; }
+  .stat .label { color: var(--ink-2); font-size: 13px; }
+  .stat .value { font-size: 24px; font-weight: 650; margin-top: 2px; }
+
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 999px;
+    border: 1px solid var(--ring); background: var(--surface); color: var(--ink); font: inherit; font-size: 13px;
+    cursor: pointer; user-select: none;
+  }
+  .chip[aria-pressed="false"] { color: var(--muted); }
+  .chip[aria-pressed="false"] .swatch { opacity: 0.3; }
+  .swatch { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .swatch.ring { background: transparent; border: 2px solid var(--short); }
+  .search { margin-left: auto; display: flex; gap: 6px; }
+  .search input {
+    width: 130px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--ring);
+    background: var(--surface); color: var(--ink); font: inherit; font-size: 13px;
+  }
+  .search .msg { color: var(--muted); font-size: 13px; align-self: center; }
+
+  .main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; }
+  #map { height: 640px; border-radius: 10px; border: 1px solid var(--ring); background: var(--surface); }
+  .panel { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 16px; }
+  .panel h2 { font-size: 18px; margin: 0 0 2px; font-weight: 650; }
+  .panel .sub { color: var(--ink-2); font-size: 13px; margin-bottom: 14px; }
+  .panel p { margin: 0 0 10px; color: var(--ink-2); font-size: 14px; }
+  .group { margin: 16px 0 4px; }
+  .group-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; font-weight: 600; }
+  .verdict { font-size: 13px; font-weight: 500; }
+  .verdict.ok { color: var(--good); }
+  .verdict.short { color: var(--short); }
+  .bar { position: relative; height: 12px; background: var(--track); border-radius: 4px; margin: 8px 0 6px; overflow: hidden; }
+  .bar span { position: absolute; top: 0; bottom: 0; }
+  .bar .today { background: var(--today); left: 0; }
+  .bar .added { background: var(--added); }
+  .need { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); }
+  .bar-wrap { position: relative; }
+  .nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; font-size: 12px; color: var(--ink-2); }
+  .nums b { display: block; color: var(--ink); font-size: 14px; font-weight: 600; }
+  .key { display: flex; gap: 14px; font-size: 12px; color: var(--ink-2); margin-top: 14px; flex-wrap: wrap; }
+  .key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .builds { margin-top: 16px; border-top: 1px solid var(--hairline); padding-top: 12px; font-size: 14px; }
+  .builds div { display: flex; justify-content: space-between; padding: 3px 0; }
+  .builds .swatch { display: inline-block; margin-right: 7px; vertical-align: 0; }
+  .tag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--ring); color: var(--ink-2); }
+
+  footer { margin-top: 18px; color: var(--muted); font-size: 13px; }
+  .leaflet-container { font: inherit; background: var(--surface); }
+  .leaflet-tooltip { font-size: 12px; }
+
+  @media (max-width: 820px) {
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .main { grid-template-columns: minmax(0, 1fr); }
+    #map { height: 60vh; }
+    .search { margin-left: 0; width: 100%; }
+    .search input { flex: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Eliminating child care deserts in New York State</h1>
+  <p class="lede">
+    The minimum-cost plan from a mixed-integer program (920,756 variables, solved with Gurobi) that brings every
+    ZIP code up to the state's child care coverage requirements. Click anywhere on the map to see one ZIP's
+    numbers. Columbia IEOR E4004 course project; <a href="https://github.com/chadreadey/Eliminating-Childcare-Deserts-in-NYS-through-Optimization">code and write-up on GitHub</a>.
+  </p>
+
+  <div class="stats">
+    <div class="stat"><div class="label">Minimum funding</div><div class="value">$444.9M</div></div>
+    <div class="stat"><div class="label">New facilities built</div><div class="value">3,513</div></div>
+    <div class="stat"><div class="label">Existing facilities expanded</div><div class="value">2,343</div></div>
+    <div class="stat"><div class="label">ZIPs short of a requirement today</div><div class="value" id="short-count">–</div></div>
+  </div>
+
+  <div class="controls" role="group" aria-label="Map layers">
+    <button class="chip" data-layer="L" aria-pressed="true"><span class="swatch" style="background:var(--l)"></span>Large, 400 slots <span class="n"></span></button>
+    <button class="chip" data-layer="M" aria-pressed="true"><span class="swatch" style="background:var(--m)"></span>Medium, 200 <span class="n"></span></button>
+    <button class="chip" data-layer="S" aria-pressed="true"><span class="swatch" style="background:var(--s)"></span>Small, 100 <span class="n"></span></button>
+    <button class="chip" data-layer="existing" aria-pressed="true"><span class="swatch" style="background:var(--existing)"></span>Existing facilities</button>
+    <button class="chip" data-layer="short" aria-pressed="false"><span class="swatch ring"></span>ZIPs short today</button>
+    <form class="search" id="search">
+      <input id="zip-input" inputmode="numeric" maxlength="5" placeholder="Find a ZIP" aria-label="Find a ZIP code">
+      <span class="msg" id="search-msg" aria-live="polite"></span>
+    </form>
+  </div>
+
+  <div class="main">
+    <div id="map" aria-label="Map of new and existing child care facilities"></div>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </div>
+
+  <footer>
+    Part 2 ("realistic") solution: new facilities only on 215,400 candidate sites, at least 0.06 miles from any other
+    facility in the same ZIP; expansions capped at 20% with rising per-slot costs. Requirements: slots for ½ of children
+    aged 0–12 in high-demand ZIPs (⅓ elsewhere), and for ⅔ of children aged 0–5. Known modeling limitations are listed in the
+    <a href="https://github.com/chadreadey/Eliminating-Childcare-Deserts-in-NYS-through-Optimization#known-limitations">README</a>.
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="data.js"></script>
+<script>
+(function () {
+  const D = window.DATA;
+  const SIZES = [
+    { key: "S", name: "Small", slots: 100, r: 2 },
+    { key: "M", name: "Medium", slots: 200, r: 2.75 },
+    { key: "L", name: "Large", slots: 400, r: 3.5 },
+  ];
+  const fmt = n => Math.round(n).toLocaleString("en-US");
+  const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+  const zips = D.zips.map(row => {
+    const z = Object.fromEntries(D.zipFields.map((f, i) => [f, row[i]]));
+    z.need0_12 = (z.highDemand ? 1 / 2 : 1 / 3) * z.pop0_12;
+    z.need0_5 = (2 / 3) * z.pop0_5;
+    z.final0_12 = z.exist0_12 + z.expand0_12 + z.new0_12;
+    z.final0_5 = z.exist0_5 + z.expand0_5 + z.new0_5;
+    z.shortToday = (z.pop0_12 > 0 && z.exist0_12 < z.need0_12 - 1e-6) || (z.pop0_5 > 0 && z.exist0_5 < z.need0_5 - 1e-6);
+    return z;
+  });
+  const byZip = Object.fromEntries(zips.map(z => [z.zip, z]));
+  const shortZips = zips.filter(z => z.shortToday && z.lat != null);
+  document.getElementById("short-count").textContent = fmt(zips.filter(z => z.shortToday).length) + " of " + fmt(zips.length);
+
+  const map = L.map("map", { preferCanvas: true, zoomSnap: 0.25, minZoom: 6 }).fitBounds([[40.45, -79.8], [45.05, -71.8]]);
+  const tileUrl = dark => "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/" +
+    (dark ? "World_Dark_Gray_Base" : "World_Light_Gray_Base") + "/MapServer/tile/{z}/{y}/{x}";
+  const isDark = () => getComputedStyle(document.documentElement).colorScheme === "dark";
+  const tiles = L.tileLayer(tileUrl(isDark()), {
+    maxZoom: 16,
+    attribution: "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors",
+  }).addTo(map);
+
+  const renderer = L.canvas({ padding: 0.3, tolerance: 4 });
+  const layers = {
+    existing: L.layerGroup(D.existing.map(([lat, lon]) => L.circleMarker([lat, lon], {
+      renderer, radius: 1.5, stroke: false, fillOpacity: 0.8, interactive: false,
+    }))),
+    short: L.layerGroup(shortZips.map(z => L.circleMarker([z.lat, z.lon], {
+      renderer, radius: 5, weight: 1.5, fill: true, fillOpacity: 0, zip: z.zip,
+    }).bindTooltip(`ZIP ${z.zip} · short of a requirement today`, { direction: "top" }))),
+  };
+  SIZES.forEach((s, i) => {
+    const pts = D.sites.filter(p => p[2] === i);
+    layers[s.key] = L.layerGroup(pts.map(([lat, lon, , zi]) => L.circleMarker([lat, lon], {
+      renderer, radius: s.r, weight: 1, fillOpacity: 0.95, zip: D.zips[zi][0], baseR: s.r,
+    }).bindTooltip(`${s.name} · ${s.slots} slots · ZIP ${D.zips[zi][0]}`, { direction: "top" })));
+    document.querySelector(`.chip[data-layer="${s.key}"] .n`).textContent = `(${fmt(pts.length)})`;
+  });
+
+  function paint() {
+    const surface = css("--surface");
+    layers.existing.eachLayer(m => m.setStyle({ fillColor: css("--existing") }));
+    layers.short.eachLayer(m => m.setStyle({ color: css("--short") }));
+    SIZES.forEach(s => layers[s.key].eachLayer(m => m.setStyle({ fillColor: css("--" + s.key.toLowerCase()), color: surface })));
+    tiles.setUrl(tileUrl(isDark()));
+  }
+  ["existing", "S", "M", "L"].forEach(k => layers[k].addTo(map));
+  paint();
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paint);
+
+  // Grow markers a little as you zoom in so neighborhoods stay readable
+  map.on("zoomend", () => {
+    const k = Math.max(1, Math.min(1.6, 1 + (map.getZoom() - 8) * 0.15));
+    SIZES.forEach(s => layers[s.key].eachLayer(m => m.setRadius(m.options.baseR * k)));
+  });
+
+  document.querySelectorAll(".chip").forEach(btn => btn.addEventListener("click", () => {
+    const on = btn.getAttribute("aria-pressed") !== "true";
+    btn.setAttribute("aria-pressed", String(on));
+    const layer = layers[btn.dataset.layer];
+    if (on) layer.addTo(map); else map.removeLayer(layer);
+  }));
+
+  // ZIP selection
+  const panel = document.getElementById("panel");
+  let highlight = null;
+
+  function overview() {
+    const added12 = zips.reduce((a, z) => a + z.expand0_12 + z.new0_12, 0);
+    panel.innerHTML = `
+      <h2>How to read this</h2>
+      <div class="sub">Part 2 · realistic scenario</div>
+      <p>Each colored dot is a new facility the optimal plan builds. Gray dots are the ${fmt(D.existing.length)} existing facilities with known locations.</p>
+      <p>Click any dot, or anywhere on the map, to see the nearest ZIP: its slots today, what the plan adds, and what the state requires.</p>
+      <p>The number and size of facilities in each ZIP is what the model decides. Within a ZIP, many candidate sites cost the same, so each dot is one of several equally good spots.</p>
+      <p>Statewide, the plan adds ${fmt(added12)} slots for children aged 0–12. ${fmt(D.sites.filter(s => s[2] === 2).length)} of the ${fmt(D.sites.length)} new facilities are the large, 400-slot size, which is the cheapest per slot.</p>`;
+  }
+
+  function groupHTML(label, today, added, need, final) {
+    const max = Math.max(need, final, 1) * 1.08;
+    const pct = v => (100 * v / max).toFixed(2) + "%";
+    const ok = final >= need - 0.5;
+    const shortToday = today < need - 1e-6;
+    const verdict = need <= 0 ? `<span class="verdict">No children in this group</span>`
+      : !shortToday ? `<span class="verdict ok">✓ Already meets it</span>`
+      : ok ? `<span class="verdict ok">✓ Met by the plan</span>`
+      : `<span class="verdict short">✕ Still short</span>`;
+    return `
+      <div class="group">
+        <div class="group-head"><span>${label}</span>${verdict}</div>
+        <div class="bar-wrap">
+          <div class="bar" role="img" aria-label="${label}: ${fmt(today)} slots today, ${fmt(added)} added, ${fmt(need)} needed">
+            <span class="today" style="width:${pct(today)}"></span>
+            <span class="added" style="left:${pct(today)};width:${pct(added)}"></span>
+          </div>
+          ${need > 0 ? `<div class="need" style="left:${pct(need)}" title="Needed: ${fmt(need)}"></div>` : ""}
+        </div>
+        <div class="nums">
+          <div><b>${fmt(today)}</b>today</div>
+          <div><b>+${fmt(added)}</b>added</div>
+          <div><b>${fmt(need)}</b>needed</div>
+        </div>
+      </div>`;
+  }
+
+  function selectZip(code, pan) {
+    const z = byZip[code];
+    if (!z) return false;
+    const builds = SIZES.map(s => [s, z["n" + s.key]]).filter(([, n]) => n > 0);
+    panel.innerHTML = `
+      <h2>ZIP ${z.zip}</h2>
+      <div class="sub">${z.highDemand ? '<span class="tag">High-demand area</span> needs slots for ½ of children 0–12' : "Needs slots for ⅓ of children 0–12"}</div>
+      ${groupHTML("Ages 0–12", z.exist0_12, z.expand0_12 + z.new0_12, z.need0_12, z.final0_12)}
+      ${groupHTML("Ages 0–5", z.exist0_5, z.expand0_5 + z.new0_5, z.need0_5, z.final0_5)}
+      ${z.exist0_12 >= z.need0_12 && z.expand0_12 + z.new0_12 > 0 ? `<p style="font-size:13px;margin-top:10px">This ZIP already had enough slots for ages 0–12. The slots added here are there to meet the 0–5 requirement, and they count toward 0–12 too.</p>` : ""}
+      <div class="key"><span><i style="background:var(--today)"></i>Slots today</span><span><i style="background:var(--added)"></i>Added by the plan</span><span><i style="background:var(--ink);width:2px"></i>Requirement</span></div>
+      <div class="builds">
+        ${builds.map(([s, n]) => `<div><span><span class="swatch" style="background:var(--${s.key.toLowerCase()})"></span>New ${s.name.toLowerCase()} facilities</span><b>${n}</b></div>`).join("")}
+        <div><span>Existing facilities expanded</span><b>${fmt(z.nExpanded)}</b></div>
+        <div><span>Children aged 0–12 · 0–5</span><b>${fmt(z.pop0_12)} · ${fmt(z.pop0_5)}</b></div>
+      </div>
+      <p style="margin-top:12px"><a href="#" id="back" style="color:var(--ink-2);font-size:13px">← Back to overview</a></p>`;
+    document.getElementById("back").addEventListener("click", e => { e.preventDefault(); clearSelection(); });
+    if (highlight) map.removeLayer(highlight);
+    if (z.lat != null) {
+      highlight = L.circleMarker([z.lat, z.lon], { radius: 14, weight: 2, color: css("--ink"), fill: false, interactive: false }).addTo(map);
+      if (pan) map.flyTo([z.lat, z.lon], Math.max(map.getZoom(), 12), { duration: 0.6 });
+    }
+    return true;
+  }
+
+  function clearSelection() {
+    if (highlight) map.removeLayer(highlight);
+    highlight = null;
+    overview();
+  }
+
+  Object.values(layers).forEach(g => g.eachLayer(m => m.options.zip && m.on("click", e => {
+    L.DomEvent.stopPropagation(e);
+    selectZip(m.options.zip, false);
+  })));
+  map.on("click", e => {
+    let best = null, bestD = Infinity;
+    const cos = Math.cos(e.latlng.lat * Math.PI / 180);
+    for (const z of zips) {
+      if (z.lat == null) continue;
+      const d = (z.lat - e.latlng.lat) ** 2 + ((z.lon - e.latlng.lng) * cos) ** 2;
+      if (d < bestD) { bestD = d; best = z; }
+    }
+    if (best && bestD < 0.05) selectZip(best.zip, false);
+  });
+
+  document.getElementById("search").addEventListener("submit", e => {
+    e.preventDefault();
+    const code = document.getElementById("zip-input").value.trim().padStart(5, "0");
+    const msg = document.getElementById("search-msg");
+    msg.textContent = selectZip(code, true) ? "" : "Not in the data";
+  });
+
+  overview();
+})();
+</script>
+</body>
+</html>

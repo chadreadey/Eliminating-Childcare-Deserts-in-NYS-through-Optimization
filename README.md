@@ -9,6 +9,7 @@ A ZIP code is a **child care desert** when its regulated child care slots don't 
   <img alt="Map of New York State showing existing child care facilities and the 3,513 new facilities the realistic model builds, sized small, medium and large, with a zoomed view of New York City." src="figures/map_light.png">
 </picture>
 
+- **Interactive map:** [chadreadey.github.io/Eliminating-Childcare-Deserts-in-NYS-through-Optimization](https://chadreadey.github.io/Eliminating-Childcare-Deserts-in-NYS-through-Optimization/). Click any ZIP to see its slots today, what the plan adds, and what the state requires.
 - Notebook (final submitted version, with outputs): [`Optimization project 1/OptimizationP1.ipynb`](Optimization%20project%201/OptimizationP1.ipynb)
 - Written formulation: [`Optimization project 1/Optimization project first two.pdf`](Optimization%20project%201/Optimization%20project%20first%20two.pdf)
 - Data: [`Optimization project 1/ChildCareDeserts_Data/`](Optimization%20project%201/ChildCareDeserts_Data)
@@ -87,9 +88,11 @@ Hardware: Apple M3 Max, Gurobi 12.0.3, academic license.
 
 In October 2026 we re-ran the submitted notebook unchanged on the same machine to export the solutions. Both parts reproduced the same objectives and facility counts; Part 2 finished in 151 s with a proven gap of 0.0097%, inside the same 0.01% tolerance. The exports in [`results/`](results) are:
 
-- `part2_new_facilities.csv`: each new site built in Part 2, with its ZIP, coordinates and size
+- `part2_new_facilities.csv`: each new site built in Part 2, with its ZIP, coordinates, size and 0–5 slots
 - `part2_expansions.csv`: each expanded facility, with slots added per cost segment and the 0–5 slots among them
 - `part1_new_by_zip.csv`: the number of S, M and L facilities Part 1 builds in each ZIP
+
+The plan is unique at the ZIP level, but not at the site level. Two re-runs built exactly the same number of each size in every ZIP and the same expansions, but chose different candidate sites inside some ZIPs: many sites in a ZIP cost the same, so the solver's pick among them is arbitrary. The maps show one of these equally cheap choices.
 
 ## Known limitations
 
@@ -110,6 +113,6 @@ cd "Optimization project 1"
 jupyter notebook OptimizationP1.ipynb
 ```
 
-To redraw the figures from `results/` (no Gurobi needed), run `python figures/make_figures.py` from the repo root.
+To redraw the figures from `results/` (no Gurobi needed), run `python figures/make_figures.py` from the repo root. To rebuild the interactive map's data, run `python docs/build_data.py`.
 
 Both models are far larger than the free size-limited `gurobipy` license allows (2,000 variables), so you need a full Gurobi license, such as a free academic one, at `~/gurobi.lic`. Part 2 takes about 3 minutes on a 16-core machine.
