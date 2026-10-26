@@ -4,9 +4,15 @@ Columbia IEOR E4004 (Optimization Models and Methods), Fall 2025, Project 1. Tea
 
 A ZIP code is a **child care desert** when its regulated child care slots don't cover enough of its children. The assignment asks for the minimum public funding that removes every desert in New York State, under two sets of assumptions. We formulated both as mixed-integer programs and solved them with Gurobi.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/map_dark.png">
+  <img alt="Map of New York State showing existing child care facilities and the 3,513 new facilities the realistic model builds, sized small, medium and large, with a zoomed view of New York City." src="figures/map_light.png">
+</picture>
+
 - Notebook (final submitted version, with outputs): [`Optimization project 1/OptimizationP1.ipynb`](Optimization%20project%201/OptimizationP1.ipynb)
 - Written formulation: [`Optimization project 1/Optimization project first two.pdf`](Optimization%20project%201/Optimization%20project%20first%20two.pdf)
 - Data: [`Optimization project 1/ChildCareDeserts_Data/`](Optimization%20project%201/ChildCareDeserts_Data)
+- Solutions (where each facility is built or expanded): [`results/`](results)
 
 ## The problem
 
@@ -58,6 +64,11 @@ Ages 5–12 are estimated as the 5–9 census bucket plus half of the 10–14 bu
 
 Both models solve. The figures below are copied from the notebook's saved outputs.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/costs_dark.png">
+  <img alt="Stacked bar chart of total cost: Part 1 $430.1M and Part 2 $444.9M, split into new construction, 0–5 equipment, and expanding existing facilities." src="figures/costs_light.png">
+</picture>
+
 | | Part 1: Idealistic | Part 2: Realistic |
 |---|---|---|
 | **Total cost** | **$430,139,450** | **$444,945,613** |
@@ -73,6 +84,12 @@ Both models solve. The figures below are copied from the notebook's saved output
 Part 2 costs about $14.8M (3.4%) more than Part 1. Capping and pricing expansions more steeply shifts capacity toward new construction, and the spacing rules leave fewer places to put it. Both parts add the same number of 0–5 slots (587,862), because the ⅔ early-childhood requirement is the binding one in most ZIPs.
 
 Hardware: Apple M3 Max, Gurobi 12.0.3, academic license.
+
+In October 2026 we re-ran the submitted notebook unchanged on the same machine to export the solutions. Both parts reproduced the same objectives and facility counts; Part 2 finished in 151 s with a proven gap of 0.0097%, inside the same 0.01% tolerance. The exports in [`results/`](results) are:
+
+- `part2_new_facilities.csv`: each new site built in Part 2, with its ZIP, coordinates and size
+- `part2_expansions.csv`: each expanded facility, with slots added per cost segment and the 0–5 slots among them
+- `part1_new_by_zip.csv`: the number of S, M and L facilities Part 1 builds in each ZIP
 
 ## Known limitations
 
@@ -92,5 +109,7 @@ pip install -r requirements.txt
 cd "Optimization project 1"
 jupyter notebook OptimizationP1.ipynb
 ```
+
+To redraw the figures from `results/` (no Gurobi needed), run `python figures/make_figures.py` from the repo root.
 
 Both models are far larger than the free size-limited `gurobipy` license allows (2,000 variables), so you need a full Gurobi license, such as a free academic one, at `~/gurobi.lic`. Part 2 takes about 3 minutes on a 16-core machine.
