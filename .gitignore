@@ -1,0 +1,17 @@
+# OS / editor
+.DS_Store
+
+# Python environments
+.venv/
+venv/
+optimization_env/
+__pycache__/
+.ipynb_checkpoints/
+
+# Gurobi licenses and logs (never commit these)
+gurobi.lic
+*.lic
+gurobi.log
+
+# Raw data archive (the extracted CSVs are tracked)
+*.zip
